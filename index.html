@@ -33,6 +33,9 @@
                         <span>Generate</span>
                     </div>
                 </div>
+                <div class="header-actions">
+                    <button onclick="showSavedInvoices()" class="btn-header"><i class="fas fa-folder-open"></i> Saved Invoices</button>
+                </div>
             </div>
         </div>
         
@@ -123,6 +126,24 @@
             </div>
         </div>
 
+        <!-- Saved Invoices -->
+        <div id="savedInvoices" class="step hidden">
+            <div class="step-header">
+                <h2><i class="fas fa-folder-open"></i> Saved Invoices</h2>
+                <p>Manage your saved invoices</p>
+            </div>
+            <div class="search-section">
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="Search invoices by number, client name, or amount..." onkeyup="searchInvoices()">
+                    <i class="fas fa-search"></i>
+                </div>
+            </div>
+            <div id="invoicesList" class="invoices-list"></div>
+            <div class="action-buttons">
+                <button onclick="hideSavedInvoices()" class="btn-secondary"><i class="fas fa-arrow-left"></i> Back</button>
+            </div>
+        </div>
+
         <!-- Step 3: Invoice Preview -->
         <div id="invoicePreview" class="step hidden">
             <div class="step-header">
@@ -130,6 +151,7 @@
                 <p>Review and download your invoice</p>
             </div>
             <div class="preview-actions">
+                <button onclick="saveInvoice()" class="btn-success"><i class="fas fa-save"></i> Save Invoice</button>
                 <button onclick="downloadPDF()" class="btn-primary"><i class="fas fa-download"></i> Download PDF</button>
                 <button onclick="editInvoice()" class="btn-secondary"><i class="fas fa-edit"></i> Edit Invoice</button>
                 <button onclick="startOver()" class="btn-outline"><i class="fas fa-redo"></i> Start Over</button>
