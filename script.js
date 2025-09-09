@@ -3,6 +3,7 @@ let invoiceData = {};
 let itemCounter = 1;
 let customFields = [];
 let customFieldCounter = 1;
+let savedInvoices = JSON.parse(localStorage.getItem('savedInvoices')) || [];
 
 function addCustomField() {
     const fieldName = document.getElementById('customFieldName').value.trim();
@@ -598,33 +599,58 @@ function downloadPDF() {
     const { jsPDF } = window.jspdf;
     const invoice = document.getElementById('invoice');
     
-    html2canvas(invoice, {
+    // Create a temporary container for PDF generation
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '0';
+    tempContainer.style.width = '794px'; // A4 width in pixels at 96 DPI
+    tempContainer.style.backgroundColor = 'white';
+    tempContainer.style.padding = '40px';
+    tempContainer.style.fontFamily = 'Arial, sans-serif';
+    tempContainer.innerHTML = invoice.innerHTML;
+    
+    document.body.appendChild(tempContainer);
+    
+    html2canvas(tempContainer, {
         scale: 2,
         useCORS: true,
-        allowTaint: true
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: 794,
+        height: tempContainer.scrollHeight
     }).then(canvas => {
+        document.body.removeChild(tempContainer);
+        
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
         
-        const imgWidth = 210;
-        const pageHeight = 295;
+        const pdfWidth = 210; // A4 width in mm
+        const pdfHeight = 297; // A4 height in mm
+        const imgWidth = pdfWidth - 20; // Leave 10mm margin on each side
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
         let heightLeft = imgHeight;
+        let position = 10; // 10mm top margin
         
-        let position = 0;
+        // Add first page
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= (pdfHeight - 20); // Subtract margins
         
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-        
+        // Add additional pages if needed
         while (heightLeft >= 0) {
-            position = heightLeft - imgHeight;
+            position = heightLeft - imgHeight + 10; // Add top margin
             pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
+            pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+            heightLeft -= (pdfHeight - 20);
         }
         
         const filename = invoiceData.invoiceNumber ? `Invoice_${invoiceData.invoiceNumber}.pdf` : 'Invoice.pdf';
         pdf.save(filename);
+    }).catch(error => {
+        document.body.removeChild(tempContainer);
+        console.error('PDF generation failed:', error);
+        alert('Failed to generate PDF. Please try again.');
     });
 }
 
@@ -640,9 +666,163 @@ function goBack() {
     document.getElementById('fieldSelection').classList.remove('hidden');
 }
 
+function saveInvoice() {
+    if (!invoiceData.invoiceNumber) {
+        alert('Invoice number is required to save');
+        return;
+    }
+    
+    const invoice = {
+        id: Date.now(),
+        ...invoiceData,
+        savedDate: new Date().toISOString(),
+        selectedFields: {...selectedFields},
+        customFields: [...customFields]
+    };
+    
+    savedInvoices.push(invoice);
+    localStorage.setItem('savedInvoices', JSON.stringify(savedInvoices));
+    
+    alert('Invoice saved successfully!');
+}
+
+function showSavedInvoices() {
+    document.getElementById('fieldSelection').classList.add('hidden');
+    document.getElementById('invoiceForm').classList.add('hidden');
+    document.getElementById('invoicePreview').classList.add('hidden');
+    document.getElementById('savedInvoices').classList.remove('hidden');
+    
+    displaySavedInvoices();
+}
+
+function hideSavedInvoices() {
+    document.getElementById('savedInvoices').classList.add('hidden');
+    document.getElementById('fieldSelection').classList.remove('hidden');
+}
+
+function displaySavedInvoices(filteredInvoices = null) {
+    const invoicesList = document.getElementById('invoicesList');
+    const invoicesToShow = filteredInvoices || savedInvoices;
+    
+    if (invoicesToShow.length === 0) {
+        invoicesList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <h3>No Invoices Found</h3>
+                <p>You haven't saved any invoices yet or no invoices match your search.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    invoicesList.innerHTML = invoicesToShow.map(invoice => {
+        const total = calculateInvoiceTotal(invoice);
+        const clientName = invoice.clientName || 'Unknown Client';
+        const date = new Date(invoice.invoiceDate || invoice.savedDate).toLocaleDateString();
+        
+        return `
+            <div class="invoice-card">
+                <div class="invoice-card-header">
+                    <div>
+                        <div class="invoice-card-title">${invoice.invoiceNumber}</div>
+                        <div class="invoice-card-date">${date}</div>
+                    </div>
+                    <div class="invoice-card-amount">$${total.toFixed(2)}</div>
+                </div>
+                <div class="invoice-card-details">
+                    <div class="invoice-card-detail">
+                        <div class="invoice-card-detail-label">Client</div>
+                        <div class="invoice-card-detail-value">${clientName}</div>
+                    </div>
+                    <div class="invoice-card-detail">
+                        <div class="invoice-card-detail-label">Items</div>
+                        <div class="invoice-card-detail-value">${invoice.items ? invoice.items.length : 0} items</div>
+                    </div>
+                </div>
+                <div class="invoice-card-actions">
+                    <button onclick="viewSavedInvoice(${invoice.id})" class="btn-small btn-view">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button onclick="deleteSavedInvoice(${invoice.id})" class="btn-small btn-delete">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function calculateInvoiceTotal(invoice) {
+    if (!invoice.items || invoice.items.length === 0) return 0;
+    
+    let subtotal = invoice.items.reduce((sum, item) => sum + (item.amount || 0), 0);
+    let total = subtotal;
+    
+    if (invoice.discount > 0) {
+        total -= (subtotal * invoice.discount) / 100;
+    }
+    
+    if (invoice.tax > 0) {
+        total += (total * invoice.tax) / 100;
+    }
+    
+    return total;
+}
+
+function searchInvoices() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    
+    if (!searchTerm) {
+        displaySavedInvoices();
+        return;
+    }
+    
+    const filteredInvoices = savedInvoices.filter(invoice => {
+        const invoiceNumber = (invoice.invoiceNumber || '').toLowerCase();
+        const clientName = (invoice.clientName || '').toLowerCase();
+        const companyName = (invoice.companyName || '').toLowerCase();
+        const total = calculateInvoiceTotal(invoice).toString();
+        
+        return invoiceNumber.includes(searchTerm) ||
+               clientName.includes(searchTerm) ||
+               companyName.includes(searchTerm) ||
+               total.includes(searchTerm);
+    });
+    
+    displaySavedInvoices(filteredInvoices);
+}
+
+function viewSavedInvoice(invoiceId) {
+    const invoice = savedInvoices.find(inv => inv.id === invoiceId);
+    if (!invoice) return;
+    
+    // Restore invoice data
+    invoiceData = {...invoice};
+    selectedFields = {...invoice.selectedFields};
+    customFields = [...invoice.customFields];
+    
+    // Render the invoice
+    renderInvoice();
+    
+    // Show preview
+    document.getElementById('savedInvoices').classList.add('hidden');
+    document.getElementById('invoicePreview').classList.remove('hidden');
+    updateProgressBar(3);
+}
+
+function deleteSavedInvoice(invoiceId) {
+    if (!confirm('Are you sure you want to delete this invoice?')) return;
+    
+    savedInvoices = savedInvoices.filter(inv => inv.id !== invoiceId);
+    localStorage.setItem('savedInvoices', JSON.stringify(savedInvoices));
+    
+    displaySavedInvoices();
+}
+
 function startOver() {
     updateProgressBar(1);
     document.getElementById('invoicePreview').classList.add('hidden');
+    document.getElementById('savedInvoices').classList.add('hidden');
     document.getElementById('fieldSelection').classList.remove('hidden');
     
     // Reset form
