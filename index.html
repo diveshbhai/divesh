@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Generator</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <h1>Invoice Generator</h1>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-step active" data-step="1">
+                        <div class="step-circle">1</div>
+                        <span>Select Fields</span>
+                    </div>
+                    <div class="progress-step" data-step="2">
+                        <div class="step-circle">2</div>
+                        <span>Fill Details</span>
+                    </div>
+                    <div class="progress-step" data-step="3">
+                        <div class="step-circle">3</div>
+                        <span>Generate</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Step 1: Field Selection -->
+        <div id="fieldSelection" class="step">
+            <div class="step-header">
+                <h2><i class="fas fa-check-square"></i> Customize Your Invoice</h2>
+                <p>Select the fields you want to include in your invoice</p>
+            </div>
+            <div class="field-categories">
+                <div class="category">
+                    <h3><i class="fas fa-building"></i> Company Information</h3>
+                    <div class="field-grid">
+                        <label class="field-card"><input type="checkbox" id="companyName" checked><span class="checkmark"></span><div class="field-info"><i class="fas fa-signature"></i>Company Name</div></label>
+                        <label class="field-card"><input type="checkbox" id="companyAddress"><span class="checkmark"></span><div class="field-info"><i class="fas fa-map-marker-alt"></i>Company Address</div></label>
+                        <label class="field-card"><input type="checkbox" id="companyPhone"><span class="checkmark"></span><div class="field-info"><i class="fas fa-phone"></i>Company Phone</div></label>
+                        <label class="field-card"><input type="checkbox" id="companyEmail"><span class="checkmark"></span><div class="field-info"><i class="fas fa-envelope"></i>Company Email</div></label>
+                        <label class="field-card"><input type="checkbox" id="logo"><span class="checkmark"></span><div class="field-info"><i class="fas fa-image"></i>Company Logo</div></label>
+                    </div>
+                </div>
+                <div class="category">
+                    <h3><i class="fas fa-file-alt"></i> Invoice Details</h3>
+                    <div class="field-grid">
+                        <label class="field-card"><input type="checkbox" id="invoiceNumber" checked><span class="checkmark"></span><div class="field-info"><i class="fas fa-hashtag"></i>Invoice Number</div></label>
+                        <label class="field-card"><input type="checkbox" id="invoiceDate" checked><span class="checkmark"></span><div class="field-info"><i class="fas fa-calendar"></i>Invoice Date</div></label>
+                        <label class="field-card"><input type="checkbox" id="dueDate"><span class="checkmark"></span><div class="field-info"><i class="fas fa-clock"></i>Due Date</div></label>
+                    </div>
+                </div>
+                <div class="category">
+                    <h3><i class="fas fa-user"></i> Client Information</h3>
+                    <div class="field-grid">
+                        <label class="field-card"><input type="checkbox" id="clientName" checked><span class="checkmark"></span><div class="field-info"><i class="fas fa-user-tie"></i>Client Name</div></label>
+                        <label class="field-card"><input type="checkbox" id="clientAddress"><span class="checkmark"></span><div class="field-info"><i class="fas fa-map-marker-alt"></i>Client Address</div></label>
+                        <label class="field-card"><input type="checkbox" id="clientPhone"><span class="checkmark"></span><div class="field-info"><i class="fas fa-phone"></i>Client Phone</div></label>
+                        <label class="field-card"><input type="checkbox" id="clientEmail"><span class="checkmark"></span><div class="field-info"><i class="fas fa-envelope"></i>Client Email</div></label>
+                    </div>
+                </div>
+                <div class="category">
+                    <h3><i class="fas fa-shopping-cart"></i> Items & Pricing</h3>
+                    <div class="field-grid">
+                        <label class="field-card"><input type="checkbox" id="items" checked><span class="checkmark"></span><div class="field-info"><i class="fas fa-list"></i>Items/Services</div></label>
+                        <label class="field-card"><input type="checkbox" id="tax"><span class="checkmark"></span><div class="field-info"><i class="fas fa-percentage"></i>Tax</div></label>
+                        <label class="field-card"><input type="checkbox" id="discount"><span class="checkmark"></span><div class="field-info"><i class="fas fa-tag"></i>Discount</div></label>
+                    </div>
+                </div>
+                <div class="category">
+                    <h3><i class="fas fa-info-circle"></i> Additional Information</h3>
+                    <div class="field-grid">
+                        <label class="field-card"><input type="checkbox" id="notes"><span class="checkmark"></span><div class="field-info"><i class="fas fa-sticky-note"></i>Notes</div></label>
+                        <label class="field-card"><input type="checkbox" id="terms"><span class="checkmark"></span><div class="field-info"><i class="fas fa-gavel"></i>Terms & Conditions</div></label>
+                        <label class="field-card"><input type="checkbox" id="bankDetails"><span class="checkmark"></span><div class="field-info"><i class="fas fa-university"></i>Bank Details</div></label>
+                    </div>
+                </div>
+                <div class="category">
+                    <h3><i class="fas fa-plus-circle"></i> Custom Fields</h3>
+                    <div id="customFieldsGrid" class="field-grid"></div>
+                    <div class="custom-field-creator">
+                        <div class="form-row">
+                            <input type="text" id="customFieldName" placeholder="Field Name" class="custom-input">
+                            <select id="customFieldType" class="custom-select">
+                                <option value="text">Text</option>
+                                <option value="textarea">Textarea</option>
+                                <option value="number">Number</option>
+                                <option value="date">Date</option>
+                                <option value="email">Email</option>
+                                <option value="tel">Phone</option>
+                            </select>
+                            <button type="button" onclick="addCustomField()" class="btn-add-custom"><i class="fas fa-plus"></i> Add Field</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button onclick="generateForm()" class="btn-primary"><i class="fas fa-arrow-right"></i> Generate Invoice Form</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Invoice Form -->
+        <div id="invoiceForm" class="step hidden">
+            <div class="step-header">
+                <h2><i class="fas fa-edit"></i> Fill Invoice Details</h2>
+                <p>Complete your invoice information</p>
+            </div>
+            <div id="dynamicForm" class="form-container"></div>
+            <div class="action-buttons">
+                <button onclick="goBack()" class="btn-secondary"><i class="fas fa-arrow-left"></i> Back</button>
+                <button onclick="generateInvoice()" class="btn-primary"><i class="fas fa-magic"></i> Generate Invoice</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Invoice Preview -->
+        <div id="invoicePreview" class="step hidden">
+            <div class="step-header">
+                <h2><i class="fas fa-eye"></i> Invoice Preview</h2>
+                <p>Review and download your invoice</p>
+            </div>
+            <div class="preview-actions">
+                <button onclick="downloadPDF()" class="btn-primary"><i class="fas fa-download"></i> Download PDF</button>
+                <button onclick="editInvoice()" class="btn-secondary"><i class="fas fa-edit"></i> Edit Invoice</button>
+                <button onclick="startOver()" class="btn-outline"><i class="fas fa-redo"></i> Start Over</button>
+            </div>
+            <div id="invoice" class="invoice"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
